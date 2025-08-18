@@ -9,11 +9,11 @@ on:
   workflow_dispatch:
     inputs:
       upstream_branch:
-        description: "上游分支"
+        description: "Upstream Branch"
         required: true
         default: "main"
       target_branch:
-        description: "要同步到的本地分支"
+        description: "Target Branch"
         required: true
         default: "main"
 
@@ -26,7 +26,7 @@ jobs:
       - name: Checkout target repo
         uses: actions/checkout@v3
         with:
-          ref: ${{ github.event.inputs.target_branch || 'master' }}
+          ref: ${{ github.event.inputs.target_branch || 'main' }}
 
       - name: Get upstream repo (if fork)
         id: upstream
@@ -48,8 +48,8 @@ jobs:
         uses: aormsby/Fork-Sync-With-Upstream-action@v3.4
         with:
           upstream_sync_repo: ${{ steps.upstream.outputs.upstream_repo }}
-          upstream_sync_branch: ${{ github.event.inputs.upstream_branch || 'master' }}
-          target_sync_branch: ${{ github.event.inputs.target_branch || 'master' }}
+          upstream_sync_branch: ${{ github.event.inputs.upstream_branch || 'main' }}
+          target_sync_branch: ${{ github.event.inputs.target_branch || 'main' }}
           target_repo_token: ${{ secrets.PAT_TOKEN || secrets.GITHUB_TOKEN }}
           test_mode: false
 
