@@ -1,8 +1,26 @@
-import { edgeHighlightStyle, nodeHighlightStyle, nodeSelectedStyle } from "@/lib/graph/layout";
-import type { EdgeWithData, Graph, NodeWithData } from "@/lib/graph/types";
-import { getParentId } from "@/lib/idgen";
+import type { EdgeWithData, Graph, NodeWithData, RevealTarget, SubGraph } from "@/lib/graph/types";
+import { getParentId, type GraphNodeId } from "@/lib/idgen";
 import { type Node as FlowNode, type Edge } from "@xyflow/react";
 import { filter, keyBy } from "lodash-es";
+import { edgeHighlightStyle, nodeHighlightStyle, nodeSelectedStyle } from "./style";
+
+// See the comment for type `GraphNodeId` for relation between `TreeNodeId` and `GraphNodeId`.
+export function toGraphNodeId(treeNodeId: string): GraphNodeId {
+  return treeNodeId as GraphNodeId;
+}
+
+export function getGraphNodeId(treeNodeId: string, target: RevealTarget) {
+  const parentId = getParentId(treeNodeId);
+  return toGraphNodeId(target === "graphNode" ? treeNodeId : (parentId ?? ""));
+}
+
+export function newGraph(g?: Omit<Graph, "__type">): Graph {
+  return g ? { ...g, __type: "graph" } : { nodes: [], edges: [], __type: "graph" };
+}
+
+export function newSubGraph(g?: Omit<SubGraph, "__type">): SubGraph {
+  return g ? { ...g, __type: "subGraph" } : { nodes: [], edges: [], __type: "subGraph" };
+}
 
 /**
  * Gets the descendants of a node.
@@ -111,6 +129,7 @@ export function highlightNode(node: NodeWithData, enable: boolean, isSelected?: 
     node.data.selected = isSelected;
   } else {
     node.data.selected = undefined;
+    node.data.selectedKvId = undefined;
   }
 
   node.style = style;
@@ -156,22 +175,4 @@ export function toggleToolbar(node: NodeWithData, clicked: NodeWithData | undefi
 export function toggleHidden<T extends FlowNode | Edge>(v: T, hide?: boolean) {
   v.hidden = hide;
   return v;
-}
-
-export function highlightElement(el: HTMLDivElement) {
-  if (CSS.highlights) {
-    const range = new Range();
-    range.selectNode(el);
-    CSS.highlights.set("search-highlight", new Highlight(range));
-  } else {
-    el.classList.add("search-highlight");
-  }
-}
-
-export function clearHighlight() {
-  if (CSS.highlights) {
-    CSS.highlights.delete("search-highlight");
-  } else {
-    document.querySelectorAll(".search-highlight").forEach((el) => el.classList.remove("search-highlight"));
-  }
 }

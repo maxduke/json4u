@@ -1,3 +1,4 @@
+import type { RevealTarget } from "@/lib/graph/types";
 import { getParentId, rootMarker } from "@/lib/idgen";
 import { escape } from "@/lib/worker/command/escape";
 import * as jsonc from "jsonc-parser";
@@ -42,6 +43,7 @@ export class Tree implements TreeObject {
   nestNodeMap?: Record<string, Node>; // A map from node ID to the root Node of a nested JSON string that has been parsed into its own tree.
   errors?: ContextError[]; // An array of parsing errors.
   version?: number; // A version number for the tree, can be used to track changes.
+  needReset?: boolean; // If true, reset the editor's cursor to the beginning and the graph's viewport.
 
   constructor(text: string = "") {
     this.nodeMap = {};
@@ -87,6 +89,11 @@ export class Tree implements TreeObject {
     return this.text.slice(node.offset, node.offset + node.length);
   }
 
+  getParent(id: string) {
+    const parentId = getParentId(id);
+    return parentId !== undefined ? this.nodeMap[parentId] : undefined;
+  }
+
   getChild(node: Node, key: string): Node | undefined {
     return this.nodeMap[getChildId(node, key)];
   }
@@ -119,12 +126,7 @@ export class Tree implements TreeObject {
     return isRoot(node) || hasChildren(node);
   }
 
-  getGraphNodeId(nodeId: string) {
-    const node = this.node(nodeId);
-    return this.isGraphNode(node) ? nodeId : getParentId(nodeId);
-  }
-
-  findNodeAtOffset(offset: number): { node: Node; type: "node" | "key" | "value" } | undefined {
+  findNodeAtOffset(offset: number): { node: Node; target: RevealTarget } | undefined {
     if (!this.valid()) {
       return undefined;
     }
@@ -167,10 +169,10 @@ export class Tree implements TreeObject {
       return undefined;
     }
 
-    if (this.isGraphNode(node)) {
-      return { node, type: "node" };
+    if (node.offset < offset && offset <= node.offset + node.length) {
+      return { node, target: "value" };
     } else {
-      return { node, type: node.offset < offset && offset <= node.offset + node.length ? "value" : "key" };
+      return { node, target: "key" };
     }
   }
 

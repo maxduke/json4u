@@ -6,10 +6,10 @@ import { vsURL } from "@/lib/editor/cdn";
 import { EditorWrapper, type Kind } from "@/lib/editor/editor";
 import { useEditor, useEditorStore } from "@/stores/editorStore";
 import { useStatusStore } from "@/stores/statusStore";
-import { getTree } from "@/stores/treeStore";
 import { loader, Editor as MonacoEditor } from "@monaco-editor/react";
 import { useTranslations } from "next-intl";
 import { useShallow } from "zustand/shallow";
+import { example } from "./data";
 
 loader.config({ paths: { vs: vsURL } });
 
@@ -22,8 +22,9 @@ export default function Editor({ kind, ...props }: EditorProps) {
   const setEditor = useEditorStore((state) => state.setEditor);
   const setTranslations = useEditorStore((state) => state.setTranslations);
 
-  useDisplayExample();
-  useRevealNode();
+  useDisplayExample(kind);
+  useRevealNode(kind);
+  useEditTree(kind);
 
   return (
     <MonacoEditor
@@ -66,7 +67,7 @@ export default function Editor({ kind, ...props }: EditorProps) {
 }
 
 // reveal position in text
-export function useRevealNode() {
+export function useRevealNode(kind: Kind) {
   const editor = useEditor("main");
   const { isNeedReveal, revealPosition } = useStatusStore(
     useShallow((state) => ({
@@ -76,72 +77,38 @@ export function useRevealNode() {
   );
 
   useEffect(() => {
-    const { treeNodeId, type } = revealPosition;
+    const { treeNodeId, target } = revealPosition;
 
-    if (editor && isNeedReveal && treeNodeId) {
-      const node = getTree().node(treeNodeId);
-      if (node) {
-        editor.revealOffset((type === "key" ? node.boundOffset : node.offset) + 1);
-      }
+    if (kind === "main" && editor && isNeedReveal && treeNodeId) {
+      editor.setNodeSelection(treeNodeId, target);
     }
   }, [editor, revealPosition, isNeedReveal]);
 }
 
-const exampleData = `{
-  "Aidan Gillen": {
-      "array": [
-          "Game of Thron\\"es",
-          "The Wire"
-      ],
-      "string": "some string",
-      "int": 2,
-      "aboolean": true,
-      "boolean": true,
-      "null": null,
-      "a_null": null,
-      "another_null": "null check",
-      "object": {
-          "foo": "bar",
-          "object1": {
-              "new prop1": "new prop value"
-          },
-          "object2": {
-              "new prop1": "new prop value"
-          },
-          "object3": {
-              "new prop1": "new prop value"
-          },
-          "object4": {
-              "new prop1": "new prop value"
-          }
-      }
-  },
-  "Amy Ryan": {
-      "one": "In Treatment",
-      "two": "The Wire"
-  },
-  "Annie Fitzgerald": [
-      "Big Love",
-      "True Blood"
-  ],
-  "Anwan Glover": [
-      "Treme",
-      "The Wire"
-  ],
-  "Alexander Skarsgard": [
-      "Generation Kill",
-      "True Blood"
-  ],
-  "Clarke Peters": null
-}`;
+export function useEditTree(kind: Kind) {
+  const editor = useEditor("main");
+  const { editQueue, clearEditQueue } = useStatusStore(
+    useShallow((state) => ({
+      editQueue: state.editQueue,
+      clearEditQueue: state.clearEditQueue,
+    })),
+  );
 
-function useDisplayExample() {
+  useEffect(() => {
+    if (kind === "main" && editor && editQueue.length > 0) {
+      editor.applyTreeEdits(editQueue);
+      clearEditQueue();
+    }
+  }, [editor, editQueue]);
+}
+
+function useDisplayExample(kind: Kind) {
   const editor = useEditor("main");
   const incrEditorInitCount = useStatusStore((state) => state.incrEditorInitCount);
 
   useEffect(() => {
-    if (editor && incrEditorInitCount() <= 1) {
-      editor.parseAndSet(exampleData);
+    if (kind === "main" && editor && incrEditorInitCount() <= 1) {
+      editor.parseAndSet(example);
     }
   }, [editor]);
 }

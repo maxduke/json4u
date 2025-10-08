@@ -16,7 +16,7 @@ export class HoverProvider {
   private registerHoverProvider() {
     const previewProvider = async (model: editorApi.ITextModel, position: IPosition) => {
       const r = this.editorWrapper.getNodeAtPosition(position);
-      if (!r || r?.type === "key") {
+      if (!r || r?.target === "key") {
         return;
       }
 
@@ -30,6 +30,9 @@ export class HoverProvider {
       let htmlOrHtmls: Awaited<ReturnType<typeof generatePreview>> = [];
 
       try {
+        // Supported HTML tags:
+        // https://github.com/microsoft/monaco-editor/issues/801#issuecomment-941713491
+        // https://github.com/microsoft/vscode/blob/6d2920473c6f13759c978dd89104c4270a83422d/src/vs/base/browser/markdownRenderer.ts#L292-L296
         htmlOrHtmls = await generatePreview(valueInStr, rawValue);
       } catch (error) {
         console.error("Failed to generate preview HTML:", error);

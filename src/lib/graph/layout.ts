@@ -1,4 +1,3 @@
-import { type CSSProperties } from "react";
 import { rootMarker } from "@/lib/idgen";
 import {
   type Tree,
@@ -11,6 +10,7 @@ import {
 } from "@/lib/parser";
 import { type XYPosition } from "@xyflow/react";
 import type { EdgeWithData, Graph, GraphNodeStyle, NodeWithData } from "./types";
+import { newGraph } from "./utils";
 
 export const config: Readonly<Record<string, any>> = {
   translateMargin: 200,
@@ -43,17 +43,6 @@ export function setupGlobalGraphStyle(style: Partial<GraphNodeStyle>) {
   Object.assign(globalStyle, style);
 }
 
-const highlightColor = "rgb(4, 81, 165)";
-const selectedColor = "rgb(163, 21, 21)";
-
-export const nodeSelectedStyle: CSSProperties = { borderColor: selectedColor };
-export const nodeHighlightStyle: CSSProperties = { borderColor: highlightColor };
-export const edgeHighlightStyle: CSSProperties = { stroke: highlightColor };
-
-export function newGraph(): Graph {
-  return { nodes: [], edges: [] };
-}
-
 /**
  * Generates flow nodes from a tree.
  * @param tree - The tree.
@@ -67,7 +56,7 @@ export function genFlowNodes(tree: Tree): Graph {
     doGenFlowNodes(nodes, edges, tree, tree.root(), "", 0);
   }
 
-  return { nodes, edges };
+  return newGraph({ nodes, edges });
 }
 
 function doGenFlowNodes(
@@ -84,12 +73,15 @@ function doGenFlowNodes(
   let maxKvWidth = 0;
   let maxChildDepth = hasChildren(node) ? 0 : -1;
 
+  // compute max key-value width and max child depth
   tree.mapChildren(node, (child, key, i) => {
     const keyText = genKeyText(key);
     const { text } = genValueAttrs(child);
     const keyWidth = Math.min(computeTextWidth(keyText, globalStyle.fontWidth), globalStyle.maxKeyWidth);
     const valueWidth = Math.min(computeTextWidth(text, globalStyle.fontWidth), globalStyle.maxValueWidth);
     const kvWidth = globalStyle.padding + keyWidth + globalStyle.kvGap + valueWidth + 2 * globalStyle.borderWidth;
+
+    flowNode.data.kvWidthMap[key] = [keyWidth, valueWidth];
     maxKvWidth = Math.max(maxKvWidth, kvWidth);
 
     if (hasChildren(child)) {
@@ -116,6 +108,7 @@ function newFlowNode(node: Node, parentId: string, level: number): NodeWithData 
       depth: 0,
       width: 0,
       height: childrenNum * globalStyle.kvHeight + 2 * globalStyle.borderWidth,
+      kvWidthMap: {},
       parentId,
       targetIds: [],
       render: {
