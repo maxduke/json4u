@@ -1,6 +1,7 @@
 import type { RevealTarget } from "@/lib/graph/types";
 import { newRevealPosition } from "@/lib/graph/utils";
 import { ParseOptions, Tree } from "@/lib/parser";
+import { escape } from "@/lib/worker/command/escape";
 import { type ParsedTree } from "@/lib/worker/command/parse";
 import { getEditorState } from "@/stores/editorStore";
 import { getStatusState, type TreeEdit } from "@/stores/statusStore";
@@ -192,13 +193,18 @@ export class EditorWrapper {
       needQuotationMarks = needQuotationMarks || editTarget === "key";
       needQuotationMarks = needQuotationMarks && !(newValue.startsWith('"') && newValue.endsWith('"'));
 
-      return {
-        text: needQuotationMarks ? `"${newValue}"` : newValue,
-        range: editTarget === "key" ? this.range(nd.boundOffset, nd.keyLength + 2) : this.range(nd.offset, nd.length),
-      };
-    });
-    console.l("edit nodes: ", treeEdits, nodes, edits);
+      let text = newValue;
+      if (needQuotationMarks) {
+        text = `"${escape(newValue)}"`;
+      }
 
+      // Keys include double quotes, so the length needs +2
+      const range =
+        editTarget === "key" ? this.range(nd.boundOffset, nd.keyLength + 2) : this.range(nd.offset, nd.length);
+      return { text, range };
+    });
+
+    console.l("edit nodes: ", treeEdits, nodes, edits);
     this.editor.executeEdits(null, edits);
     this.editor.pushUndoStop();
   }
